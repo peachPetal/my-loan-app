@@ -15,12 +15,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
+      <head>
+        {/* ✅ 핵심: viewport 메타 태그 명시적 추가 */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+      </head>
       <body className="bg-gray-50 flex justify-center min-h-screen">
         <div className="w-full max-w-[420px] bg-white min-h-screen shadow-lg relative">
-          
-          {/* 2. 여기에 배치! (보이지 않지만 작동함) */}
           <AuthListener />
-          
           {children}
         </div>
       </body>
