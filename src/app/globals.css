@@ -12,10 +12,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* ✅ 핵심: iOS Safari 전용 높이 처리 */
 html {
   height: 100%;
-  /* iOS Safari 대응 */
   height: -webkit-fill-available;
 }
 
@@ -23,11 +21,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  /* ✅ 핵심: min-height 대신 height 사용 */
   min-height: 100vh;
   min-height: -webkit-fill-available;
   margin: 0;
+  
+  /* ✅ 스크롤바 숨기기 (Chrome, Safari, Opera) */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  /* ✅ 스크롤바 숨기기 (Firefox, IE, Edge) */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
-
-/* Tailwind 3.4+ 사용 시 app/page.tsx에서 직접 사용 가능 */
-/* .min-h-[100dvh] { min-height: 100dvh; } */
