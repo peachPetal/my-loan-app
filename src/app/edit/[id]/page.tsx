@@ -201,7 +201,7 @@ export default function EditLoanPage() {
                 value={formData.repayment_period} 
                 onChange={(e) => handleNumberChange(e, 'repayment_period')} 
                 required 
-                placeholder="120"
+                placeholder="0"
               />
             </div>
           </div>
