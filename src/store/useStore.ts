@@ -1,32 +1,45 @@
+/* src/store/useStore.ts - 앱의 데이터 관리 소장님 */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/supabase'; // 자동 생성된 타입 import
+import { Database } from '@/types/supabase'; // Supabase 자동 생성 타입
 
-// DB의 'loans' 테이블의 행(Row) 타입 가져오기
+// DB의 'loans' 테이블 행 타입 가져오기
 type Loan = Database['public']['Tables']['loans']['Row'];
 
 interface State {
-  // 상태 (Data)
+  // ========== 상태 (Data) ==========
   user: any | null; // Supabase User 객체
   loans: Loan[];    // 대출 목록
   isLoading: boolean;
+  isAuthInitialized: boolean; // ✅ 인증 초기화 완료 여부 (로딩 상태 관리용)
 
-  // 액션 (Functions)
+  // ========== 액션 (Functions) ==========
   setUser: (user: any | null) => void;
+  setAuthInitialized: (value: boolean) => void; // ✅ 인증 초기화 상태 설정
   fetchLoans: () => Promise<void>;
 }
 
 export const useStore = create<State>((set, get) => ({
+  // ========== 초기 상태 ==========
   user: null,
   loans: [],
   isLoading: false,
+  isAuthInitialized: false, // ✅ 초기엔 false (아직 인증 상태 확인 중)
 
-  // 유저 정보 저장
+  // ========== 액션 구현 ==========
+  
+  /** 유저 정보 저장 */
   setUser: (user) => set({ user }),
 
-  // Supabase에서 대출 목록 가져오기
+  /** 인증 초기화 상태 설정 (AuthListener에서 사용) */
+  setAuthInitialized: (value) => set({ isAuthInitialized: value }),
+
+  /** Supabase에서 대출 목록 가져오기 */
   fetchLoans: async () => {
+    // 이미 로딩 중이면 중복 요청 방지
+    if (get().isLoading) return; 
+    
     set({ isLoading: true });
     
     try {
@@ -36,17 +49,37 @@ export const useStore = create<State>((set, get) => ({
         .order('created_at', { ascending: false }); // 최신순 정렬
 
       if (error) {
-        console.error('Error fetching loans:', error);
+        console.error('❌ 대출 목록 불러오기 실패:', error);
+        // 오류 시 빈 배열로 초기화
+        set({ loans: [] });
       } else {
         set({ loans: data || [] });
       }
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.error('예상치 못한 오류:', err);
+      set({ loans: [] });
     } finally {
       set({ isLoading: false });
     }
   },
 }));
+
+/**
+ * useStore 역할 요약:
+ * 
+ * 1. 데이터 보관소 (Central Storage)
+ *    - user: "누가 로그인했나?"
+ *    - loans: "대출 목록은 뭐가 있나?"
+ *    - isAuthInitialized: "인증 상태 확인 끝났나?"
+ * 
+ * 2. 데이터 배달부 (Data Fetcher)
+ *    - fetchLoans(): Supabase에서 데이터 가져와서 loans에 저장
+ *    - 각 페이지는 DB 코드 몰라도 "소장님, 데이터 좀!" 하면 됨
+ * 
+ * 3. 상태 알리미 (State Notifier)
+ *    - isLoading: "지금 로딩 중이야" → UI에서 스켈레톤/로딩 화면 표시
+ *    - isAuthInitialized: "인증 확인 중이야" → 로그인 페이지로 가기 전까지 대기
+ */
 
 // src/store/useStore.ts의 역할은 우리 앱의 **"데이터 관리 소장님"**입니다.
 

@@ -1,4 +1,4 @@
-'use client'; // 브라우저에서 작동하는 코드이므로 필수
+'use client';
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -6,39 +6,51 @@ import { supabase } from '@/lib/supabase';
 import { useStore } from '@/store/useStore';
 
 export default function AuthListener() {
-  const { setUser } = useStore();
+  const { setUser, setAuthInitialized } = useStore();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // 1. 초기 세션 확인 (앱 켜자마자 실행)
+    let isMounted = true;
+
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      const user = session?.user ?? null;
+      
+      if (!isMounted) return;
+      
+      setUser(user);
+      setAuthInitialized(true); // ✅ 인증 확인 완료!
+
+
+      // ✅ 핵심: 초기 접근 시 비로그인이면 즉시 리다이렉트
+      if (!user && pathname !== '/login') {
+        router.replace('/login');
+      }
     };
+
     checkSession();
 
-    // 2. 인증 상태 변화 감지 (로그인/로그아웃 순간 실행)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      
       setUser(session?.user ?? null);
 
-      // 로그아웃 하면 로그인 페이지로 튕겨내기
-      if (event === 'SIGNED_OUT') {
-        router.push('/login');
-      } 
-      // 로그인 하면 홈으로 이동 (단, 로그인 페이지에 있을 때만)
-      else if (event === 'SIGNED_IN' && pathname === '/login') {
-        router.push('/');
+      // 기존 이벤트 기반 리다이렉트 (로그아웃 후 처리)
+      if (event === 'SIGNED_OUT' && pathname !== '/login') {
+        router.replace('/login');
+      } else if (event === 'SIGNED_IN' && pathname === '/login') {
+        router.replace('/');
       }
     });
 
-    // 3. 청소 (컴포넌트가 사라질 때 감지 중단)
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [setUser, router, pathname]);
+  }, [setUser, router, pathname, setAuthInitialized]);
 
-  return null; // 화면에는 아무것도 그리지 않음
+  return null;
 }
 
 // 좋습니다! **AuthListener**는 앱이라는 건물의 '경비실' 같은 존재입니다. 사용자가 문을 열고 들어올 때(앱 접속), 누군지 확인하고 "이분은 회원님입니다"라고 Store(소장님)에게 알려주는 역할을 하죠.
